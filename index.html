@@ -595,7 +595,7 @@ function getAnchorsFromState(s) {
     const lly = B.bottom - 10;
     const LEG_H_1P = [0, 23, 26, 30, 25, 23, 28];
     const legIdx1p = Math.min(s.parts.legs || 0, LEG_H_1P.length - 1);
-    const feetBase1p = legIdx1p > 0 ? lly + LEG_H_1P[legIdx1p] : B.bottom;
+    const feetBase1p = legIdx1p > 0 ? lly + LEG_H_1P[legIdx1p] - 8 : B.bottom;
     const hx = 100;
     const hy = B.top + 0.38 * (B.bottom - B.top);
     return {
@@ -650,7 +650,7 @@ function getAnchorsFromState(s) {
   const lly = B.bottom - 10;
   const LEG_H_2P = [0, 23, 26, 30, 25, 23, 28];
   const legIdx2p = Math.min(s.parts.legs || 0, LEG_H_2P.length - 1);
-  const feetBase2p = legIdx2p > 0 ? lly + LEG_H_2P[legIdx2p] : B.bottom;
+  const feetBase2p = legIdx2p > 0 ? lly + LEG_H_2P[legIdx2p] - 8 : B.bottom;
   const eyeDx = HEAD_EYE_DX[hi];
   const eyo = HEAD_EYE_YOFF[hi];
   const earX = HEAD_EAR_XOFF[hi];
@@ -895,8 +895,8 @@ const PARTS = {
         <rect x="${a.hmxR - 11}" y="${a.ray+2}" width="22" height="16" rx="8" fill="${p.u('alt')}" stroke="none"/>
       ` },
       { name:'Blocks', render:(a,p)=>`
-        <rect x="${a.hmxL - 8}" y="${a.lay+2}" width="16" height="16" rx="5" fill="${p.u('alt')}" stroke="none"/>
-        <rect x="${a.hmxR - 8}" y="${a.ray+2}" width="16" height="16" rx="5" fill="${p.u('alt')}" stroke="none"/>
+        <rect x="${a.hmxL - 8}" y="${a.lay+2}" width="16" height="16" rx="8" fill="${p.u('alt')}" stroke="none"/>
+        <rect x="${a.hmxR - 8}" y="${a.ray+2}" width="16" height="16" rx="8" fill="${p.u('alt')}" stroke="none"/>
       ` },
     ]
   },
@@ -914,12 +914,12 @@ const PARTS = {
         <rect x="${a.rlx-5}" y="${a.rly}" width="10" height="26" rx="5" fill="${p.u('alt')}" stroke="none"/>
       ` },
       { name:'Plank', render:(a,p)=>`
-        <rect x="${a.llx-12}" y="${a.lly}" width="24" height="30" rx="8" fill="${p.u('main')}" stroke="none"/>
-        <rect x="${a.rlx-12}" y="${a.rly}" width="24" height="30" rx="8" fill="${p.u('main')}" stroke="none"/>
+        <rect x="${a.llx-12}" y="${a.lly}" width="24" height="30" rx="12" fill="${p.u('main')}" stroke="none"/>
+        <rect x="${a.rlx-12}" y="${a.rly}" width="24" height="30" rx="12" fill="${p.u('main')}" stroke="none"/>
       ` },
       { name:'Chunky', render:(a,p)=>`
-        <rect x="${a.llx-9}" y="${a.lly}" width="18" height="25" rx="7" fill="${p.u('main')}" stroke="none"/>
-        <rect x="${a.rlx-9}" y="${a.rly}" width="18" height="25" rx="7" fill="${p.u('main')}" stroke="none"/>
+        <rect x="${a.llx-9}" y="${a.lly}" width="18" height="25" rx="9" fill="${p.u('main')}" stroke="none"/>
+        <rect x="${a.rlx-9}" y="${a.rly}" width="18" height="25" rx="9" fill="${p.u('main')}" stroke="none"/>
       ` },
       { name:'Semis', render:(a,p)=>`
         <ellipse cx="${a.llx}" cy="${a.lly+12}" rx="9" ry="11" fill="${p.u('accent')}" stroke="none"/>
@@ -966,10 +966,10 @@ const PARTS = {
         <ellipse cx="${a.rex}" cy="${a.rey}" rx="12" ry="11" fill="${p.u('accent')}" stroke="none"/>
       ` },
       { name:'Pointed', render:(a,p)=>`
-        <polygon points="${a.lex-8},${a.ley+6} ${a.lex+8},${a.ley+6} ${a.lex},${a.ley-18}" fill="${p.u('main')}" stroke="none"/>
-        <polygon points="${a.lex-4},${a.ley+4} ${a.lex+4},${a.ley+4} ${a.lex},${a.ley-10}" fill="${p.u('accent')}"/>
-        <polygon points="${a.rex-8},${a.rey+6} ${a.rex+8},${a.rey+6} ${a.rex},${a.rey-18}" fill="${p.u('main')}" stroke="none"/>
-        <polygon points="${a.rex-4},${a.rey+4} ${a.rex+4},${a.rey+4} ${a.rex},${a.rey-10}" fill="${p.u('accent')}"/>
+        <path d="M${a.lex},${a.ley+8} C${a.lex-16},${a.ley+4} ${a.lex-10},${a.ley-18} ${a.lex},${a.ley-18} C${a.lex+10},${a.ley-18} ${a.lex+16},${a.ley+4} ${a.lex},${a.ley+8} Z" fill="${p.u('main')}" stroke="none"/>
+        <path d="M${a.lex},${a.ley+4} C${a.lex-8},${a.ley+2} ${a.lex-5},${a.ley-10} ${a.lex},${a.ley-10} C${a.lex+5},${a.ley-10} ${a.lex+8},${a.ley+2} ${a.lex},${a.ley+4} Z" fill="${p.u('accent')}" stroke="none"/>
+        <path d="M${a.rex},${a.rey+8} C${a.rex-16},${a.rey+4} ${a.rex-10},${a.rey-18} ${a.rex},${a.rey-18} C${a.rex+10},${a.rey-18} ${a.rex+16},${a.rey+4} ${a.rex},${a.rey+8} Z" fill="${p.u('main')}" stroke="none"/>
+        <path d="M${a.rex},${a.rey+4} C${a.rex-8},${a.rey+2} ${a.rex-5},${a.rey-10} ${a.rex},${a.rey-10} C${a.rex+5},${a.rey-10} ${a.rex+8},${a.rey+2} ${a.rex},${a.rey+4} Z" fill="${p.u('accent')}" stroke="none"/>
       ` },
       { name:'Puff', render:(a,p)=>`
         <ellipse cx="${a.lex}" cy="${a.ley+4}" rx="14" ry="12" fill="${p.u('main')}" stroke="none"/>
