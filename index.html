@@ -701,17 +701,16 @@ function getAnchorsFromState(s) {
     const midY = B.top + 0.28 * (B.bottom - B.top);
     let shoulderY = B.top + 0.38 * (B.bottom - B.top);
     const earIdx = s.parts.ears || 0;
-    if (earIdx > 0) shoulderY += 8;
+    if (earIdx > 0) shoulderY += 6;
     let { left: sl, right: sr } = onepieceShoulderLateral(bi, bx, by, shoulderY);
     if (earIdx > 0) {
-      const earIn = 6 + Math.min(3, earIdx);
-      sl += earIn;
-      sr -= earIn;
+      sl += 3;
+      sr -= 3;
     }
     const footInset = 0.14 * (B.right - B.left);
     const llx = B.left + footInset + 10;
     const rlx = B.right - footInset - 10;
-    const lly = B.bottom - 12;
+    const lly = B.bottom - 8;
     const hx = 100;
     const hy = B.top + 0.38 * (B.bottom - B.top);
     return {
@@ -730,10 +729,14 @@ function getAnchorsFromState(s) {
       rlx,
       lly,
       rly: lly,
-      lex: B.left + 16,
-      rex: B.right - 16,
+      lex: onepieceShoulderLateral(bi, bx, by, B.top + 22).left,
+      rex: onepieceShoulderLateral(bi, bx, by, B.top + 22).right,
       ley: B.top + 22,
       rey: B.top + 22,
+      lex2: onepieceShoulderLateral(bi, bx, by, B.top + 34).left,
+      rex2: onepieceShoulderLateral(bi, bx, by, B.top + 34).right,
+      ley2: B.top + 34,
+      rey2: B.top + 34,
       lEx: hx - 12,
       rEx: hx + 12,
       lEy: hy - 2,
@@ -742,9 +745,12 @@ function getAnchorsFromState(s) {
       shoulderRight: sr,
       armOutL: sl - 18,
       armOutR: sr + 18,
-      hmxL: sl - 24,
-      hmxR: sr + 24,
-      hmy: shoulderY + 12,
+      hmxL: sl - 34,
+      hmxR: sr + 34,
+      hmy: shoulderY + 18,
+      topLex: hx - 10,
+      topRex: hx + 10,
+      topEy: B.top,
       neck: null,
     };
   }
@@ -760,17 +766,11 @@ function getAnchorsFromState(s) {
   const headRight = hx + HEAD_LEFT[hi];
   let shoulderY = B.top + 0.42 * (B.bottom - B.top);
   const earIdx2 = s.parts.ears || 0;
-  if (earIdx2 > 0) shoulderY += 8;
   let { left: sl, right: sr } = twopieceShoulderLateral(bi, bx, by, shoulderY);
-  if (earIdx2 > 0) {
-    const earIn = 6 + Math.min(3, earIdx2);
-    sl += earIn;
-    sr -= earIn;
-  }
   const footInset = 0.12 * (B.right - B.left);
   const llx = B.left + footInset + 8;
   const rlx = B.right - footInset - 8;
-  const lly = B.bottom - 12;
+  const lly = B.bottom - 8;
   const eyeDx = HEAD_EYE_DX[hi];
   const eyo = HEAD_EYE_YOFF[hi];
   const earX = HEAD_EAR_XOFF[hi];
@@ -802,6 +802,10 @@ function getAnchorsFromState(s) {
     rex: headRight - earX,
     ley: hy - 8,
     rey: hy - 8,
+    lex2: headLeft + earX,
+    rex2: headRight - earX,
+    ley2: hy + 4,
+    rey2: hy + 4,
     lEx: hx - eyeDx,
     rEx: hx + eyeDx,
     lEy: hy + eyo,
@@ -810,9 +814,12 @@ function getAnchorsFromState(s) {
     shoulderRight: sr,
     armOutL,
     armOutR,
-    hmxL: armOutL - 6,
-    hmxR: armOutR + 6,
-    hmy: shoulderY + 12,
+    hmxL: armOutL - 10,
+    hmxR: armOutR + 10,
+    hmy: shoulderY + 18,
+    topLex: hx - 10,
+    topRex: hx + 10,
+    topEy: hy - 28,
     neck: {
       x: hx - 14,
       y: bodyTop - 1,
@@ -975,13 +982,17 @@ const PARTS = {
         <rect x="${a.shoulderLeft - 30}" y="${a.lay-4}" width="34" height="10" rx="5" fill="${p.u('alt')}" transform="rotate(18 ${a.shoulderLeft - 13} ${a.lay+1})"/>
         <rect x="${a.shoulderRight - 4}" y="${a.ray-4}" width="34" height="10" rx="5" fill="${p.u('alt')}" transform="rotate(-18 ${a.shoulderRight + 13} ${a.ray+1})"/>
       ` },
-      { name:'Raised', render:(a,p)=>`
-        <rect x="${a.shoulderLeft - 22}" y="${a.lay-24}" width="12" height="30" rx="6" fill="${p.u('alt')}" transform="rotate(-22 ${a.shoulderLeft - 10} ${a.lay-9})"/>
-        <rect x="${a.shoulderRight - 10}" y="${a.ray-24}" width="12" height="30" rx="6" fill="${p.u('alt')}" transform="rotate(22 ${a.shoulderRight + 10} ${a.ray-9})"/>
-      ` },
+      { name:'Raised', render:(a,p)=>{
+        // pivot at shoulder; arm grows upward-outward from body edge
+        const lx = a.shoulderLeft + 2, rx2 = a.shoulderRight - 2;
+        return `
+        <rect x="${lx - 7}" y="${a.lay - 30}" width="14" height="32" rx="7" fill="${p.u('alt')}" transform="rotate(-18 ${lx} ${a.lay})"/>
+        <rect x="${rx2 - 7}" y="${a.ray - 30}" width="14" height="32" rx="7" fill="${p.u('alt')}" transform="rotate(18 ${rx2} ${a.ray})"/>
+        `;
+      }},
       { name:'Broad', render:(a,p)=>`
-        <rect x="${a.shoulderLeft - 48}" y="${a.lay-10}" width="52" height="20" rx="10" fill="${p.u('main')}" stroke="none" transform="rotate(-6 ${a.shoulderLeft + 2} ${a.lay})"/>
-        <rect x="${a.shoulderRight - 4}" y="${a.ray-10}" width="52" height="20" rx="10" fill="${p.u('main')}" stroke="none" transform="rotate(6 ${a.shoulderRight - 2} ${a.ray})"/>
+        <rect x="${a.shoulderLeft - 36}" y="${a.lay-8}" width="38" height="16" rx="8" fill="${p.u('main')}" stroke="none" transform="rotate(-5 ${a.shoulderLeft} ${a.lay})"/>
+        <rect x="${a.shoulderRight - 2}" y="${a.ray-8}" width="38" height="16" rx="8" fill="${p.u('main')}" stroke="none" transform="rotate(5 ${a.shoulderRight} ${a.ray})"/>
       ` },
       { name:'Nubs', render:(a,p)=>`
         <circle cx="${a.shoulderLeft + 2}" cy="${a.lay}" r="12" fill="${p.u('accent')}" stroke="none"/>
@@ -994,39 +1005,22 @@ const PARTS = {
     label: 'Hands',
     variants: [
       { name:'None', render:()=>'' },
-      { name:'Mitts', render:(a,p)=>{
-        const mxl = (a.shoulderLeft + a.hmxL) / 2, myl = (a.lay + a.hmy) / 2;
-        const mxr = (a.shoulderRight + a.hmxR) / 2, myr = (a.ray + a.hmy) / 2;
-        return `
-        <path d="M${a.shoulderLeft},${a.lay} Q${mxl - 12},${myl} ${a.hmxL},${a.hmy} Q${mxl + 14},${myl} ${a.shoulderLeft},${a.lay} Z" fill="${p.u('main')}" stroke="none"/>
-        <path d="M${a.shoulderRight},${a.ray} Q${mxr + 12},${myr} ${a.hmxR},${a.hmy} Q${mxr - 14},${myr} ${a.shoulderRight},${a.ray} Z" fill="${p.u('main')}" stroke="none"/>
-        `;
-      }},
-      { name:'Pads', render:(a,p)=>{
-        const hyL = a.lay + (a.hmy - a.lay) * 0.85, hyR = a.ray + (a.hmy - a.ray) * 0.85;
-        const mxl = (a.shoulderLeft + a.hmxL) / 2, myl = (a.lay + hyL) / 2;
-        const mxr = (a.shoulderRight + a.hmxR) / 2, myr = (a.ray + hyR) / 2;
-        return `
-        <path d="M${a.shoulderLeft},${a.lay} Q${mxl - 14},${myl} ${a.hmxL},${hyL} Q${mxl + 16},${myl} ${a.shoulderLeft},${a.lay} Z" fill="${p.u('accent')}" stroke="none"/>
-        <path d="M${a.shoulderRight},${a.ray} Q${mxr + 14},${myr} ${a.hmxR},${hyR} Q${mxr - 16},${myr} ${a.shoulderRight},${a.ray} Z" fill="${p.u('accent')}" stroke="none"/>
-        `;
-      }},
-      { name:'Paws', render:(a,p)=>{
-        const mxl = (a.shoulderLeft + a.hmxL) / 2, myl = (a.lay + a.hmy) / 2;
-        const mxr = (a.shoulderRight + a.hmxR) / 2, myr = (a.ray + a.hmy) / 2;
-        return `
-        <path d="M${a.shoulderLeft},${a.lay} Q${mxl - 10},${myl} ${a.hmxL},${a.hmy} Q${mxl + 12},${myl} ${a.shoulderLeft},${a.lay} Z" fill="${p.u('alt')}" stroke="none"/>
-        <path d="M${a.shoulderRight},${a.ray} Q${mxr + 10},${myr} ${a.hmxR},${a.hmy} Q${mxr - 12},${myr} ${a.shoulderRight},${a.ray} Z" fill="${p.u('alt')}" stroke="none"/>
-        `;
-      }},
-      { name:'Blocks', render:(a,p)=>{
-        const mxl = (a.shoulderLeft + a.hmxL) / 2, myl = (a.lay + a.hmy) / 2;
-        const mxr = (a.shoulderRight + a.hmxR) / 2, myr = (a.ray + a.hmy) / 2;
-        return `
-        <path d="M${a.shoulderLeft},${a.lay} Q${mxl - 8},${myl} ${a.hmxL},${a.hmy} Q${mxl + 10},${myl} ${a.shoulderLeft},${a.lay} Z" fill="${p.u('alt')}" stroke="none"/>
-        <path d="M${a.shoulderRight},${a.ray} Q${mxr + 8},${myr} ${a.hmxR},${a.hmy} Q${mxr - 10},${myr} ${a.shoulderRight},${a.ray} Z" fill="${p.u('alt')}" stroke="none"/>
-        `;
-      }},
+      { name:'Rounds', render:(a,p)=>`
+        <circle cx="${a.shoulderLeft - 7}" cy="${a.lay + 3}" r="11" fill="${p.u('main')}" stroke="none"/>
+        <circle cx="${a.shoulderRight + 7}" cy="${a.ray + 3}" r="11" fill="${p.u('main')}" stroke="none"/>
+      ` },
+      { name:'Ovals', render:(a,p)=>`
+        <ellipse cx="${a.shoulderLeft - 10}" cy="${a.lay + 4}" rx="14" ry="9" fill="${p.u('main')}" stroke="none"/>
+        <ellipse cx="${a.shoulderRight + 10}" cy="${a.ray + 4}" rx="14" ry="9" fill="${p.u('main')}" stroke="none"/>
+      ` },
+      { name:'Blocks', render:(a,p)=>`
+        <rect x="${a.shoulderLeft - 12}" y="${a.lay - 7}" width="16" height="15" rx="5" fill="${p.u('alt')}" stroke="none"/>
+        <rect x="${a.shoulderRight - 4}" y="${a.ray - 7}" width="16" height="15" rx="5" fill="${p.u('alt')}" stroke="none"/>
+      ` },
+      { name:'Pads', render:(a,p)=>`
+        <ellipse cx="${a.shoulderLeft - 4}" cy="${a.lay + 6}" rx="8" ry="12" fill="${p.u('alt')}" stroke="none"/>
+        <ellipse cx="${a.shoulderRight + 4}" cy="${a.ray + 6}" rx="8" ry="12" fill="${p.u('alt')}" stroke="none"/>
+      ` },
     ]
   },
 
@@ -1061,38 +1055,26 @@ const PARTS = {
     label: 'Feet',
     variants: [
       { name:'None', render:()=>'' },
-      { name:'Circles', render:(a,p)=>{
-        const tyl = a.lly + 19, tyr = a.rly + 19;
-        const ml = (a.lly + tyl) / 2, mr = (a.rly + tyr) / 2;
-        return `
-        <path d="M${a.llx},${a.lly} Q${a.llx-9},${ml} ${a.llx-2},${tyl} Q${a.llx+11},${ml} ${a.llx},${a.lly} Z" fill="${p.u('main')}" stroke="none"/>
-        <path d="M${a.rlx},${a.rly} Q${a.rlx+9},${mr} ${a.rlx+2},${tyr} Q${a.rlx-11},${mr} ${a.rlx},${a.rly} Z" fill="${p.u('main')}" stroke="none"/>
-        `;
-      }},
-      { name:'Ovals', render:(a,p)=>{
-        const tyl = a.lly + 20, tyr = a.rly + 20;
-        const ml = (a.lly + tyl) / 2, mr = (a.rly + tyr) / 2;
-        return `
-        <path d="M${a.llx},${a.lly} Q${a.llx-11},${ml} ${a.llx-4},${tyl} Q${a.llx+13},${ml} ${a.llx},${a.lly} Z" fill="${p.u('main')}" stroke="none"/>
-        <path d="M${a.rlx},${a.rly} Q${a.rlx+11},${mr} ${a.rlx+4},${tyr} Q${a.rlx-13},${mr} ${a.rlx},${a.rly} Z" fill="${p.u('main')}" stroke="none"/>
-        `;
-      }},
-      { name:'Blocks', render:(a,p)=>{
-        const tyl = a.lly + 21, tyr = a.rly + 21;
-        const ml = (a.lly + tyl) / 2, mr = (a.rly + tyr) / 2;
-        return `
-        <path d="M${a.llx},${a.lly} Q${a.llx-10},${ml} ${a.llx-6},${tyl} Q${a.llx+14},${ml} ${a.llx},${a.lly} Z" fill="${p.u('alt')}" stroke="none"/>
-        <path d="M${a.rlx},${a.rly} Q${a.rlx+10},${mr} ${a.rlx+6},${tyr} Q${a.rlx-14},${mr} ${a.rlx},${a.rly} Z" fill="${p.u('alt')}" stroke="none"/>
-        `;
-      }},
-      { name:'Triangles', render:(a,p)=>{
-        const tyl = a.lly + 19, tyr = a.rly + 19;
-        const ml = (a.lly + tyl) / 2, mr = (a.rly + tyr) / 2;
-        return `
-        <path d="M${a.llx},${a.lly} Q${a.llx-12},${ml} ${a.llx-4},${tyl} Q${a.llx+14},${ml} ${a.llx},${a.lly} Z" fill="${p.u('accent')}" stroke="none"/>
-        <path d="M${a.rlx},${a.rly} Q${a.rlx+12},${mr} ${a.rlx+4},${tyr} Q${a.rlx-14},${mr} ${a.rlx},${a.rly} Z" fill="${p.u('accent')}" stroke="none"/>
-        `;
-      }},
+      { name:'Rounds', render:(a,p)=>`
+        <circle cx="${a.llx}" cy="${a.lly + 14}" r="13" fill="${p.u('main')}" stroke="none"/>
+        <circle cx="${a.rlx}" cy="${a.rly + 14}" r="13" fill="${p.u('main')}" stroke="none"/>
+      ` },
+      { name:'Flats', render:(a,p)=>`
+        <ellipse cx="${a.llx - 4}" cy="${a.lly + 14}" rx="16" ry="10" fill="${p.u('main')}" stroke="none"/>
+        <ellipse cx="${a.rlx + 4}" cy="${a.rly + 14}" rx="16" ry="10" fill="${p.u('main')}" stroke="none"/>
+      ` },
+      { name:'Stubs', render:(a,p)=>`
+        <ellipse cx="${a.llx}" cy="${a.lly + 16}" rx="8" ry="17" fill="${p.u('alt')}" stroke="none"/>
+        <ellipse cx="${a.rlx}" cy="${a.rly + 16}" rx="8" ry="17" fill="${p.u('alt')}" stroke="none"/>
+      ` },
+      { name:'Pads', render:(a,p)=>`
+        <rect x="${a.llx - 12}" y="${a.lly + 8}" width="24" height="16" rx="8" fill="${p.u('alt')}" stroke="none"/>
+        <rect x="${a.rlx - 12}" y="${a.rly + 8}" width="24" height="16" rx="8" fill="${p.u('alt')}" stroke="none"/>
+      ` },
+      { name:'Chonks', render:(a,p)=>`
+        <rect x="${a.llx - 11}" y="${a.lly + 4}" width="22" height="24" rx="9" fill="${p.u('accent')}" stroke="none"/>
+        <rect x="${a.rlx - 11}" y="${a.rly + 4}" width="22" height="24" rx="9" fill="${p.u('accent')}" stroke="none"/>
+      ` },
     ]
   },
 
@@ -1105,10 +1087,10 @@ const PARTS = {
         <ellipse cx="${a.rex}" cy="${a.rey}" rx="12" ry="11" fill="${p.u('accent')}" stroke="none"/>
       ` },
       { name:'Pointed', render:(a,p)=>`
-        <path d="M${a.lex-9},${a.ley+6} Q${a.lex-10},${a.ley-4} ${a.lex},${a.ley-17} Q${a.lex+10},${a.ley-4} ${a.lex+9},${a.ley+6} Q${a.lex},${a.ley+8} ${a.lex-9},${a.ley+6} Z" fill="${p.u('main')}" stroke="none"/>
-        <path d="M${a.lex-5},${a.ley+4} Q${a.lex-5},${a.ley-3} ${a.lex},${a.ley-11} Q${a.lex+5},${a.ley-3} ${a.lex+5},${a.ley+4} Z" fill="${p.u('accent')}" stroke="none"/>
-        <path d="M${a.rex-9},${a.rey+6} Q${a.rex-10},${a.rey-4} ${a.rex},${a.rey-17} Q${a.rex+10},${a.rey-4} ${a.rex+9},${a.rey+6} Q${a.rex},${a.rey+8} ${a.rex-9},${a.rey+6} Z" fill="${p.u('main')}" stroke="none"/>
-        <path d="M${a.rex-5},${a.rey+4} Q${a.rex-5},${a.rey-3} ${a.rex},${a.rey-11} Q${a.rex+5},${a.rey-3} ${a.rex+5},${a.rey+4} Z" fill="${p.u('accent')}" stroke="none"/>
+        <ellipse cx="${a.lex}" cy="${a.ley - 8}" rx="9" ry="15" fill="${p.u('main')}" stroke="none"/>
+        <ellipse cx="${a.lex}" cy="${a.ley - 7}" rx="5" ry="9" fill="${p.u('accent')}" stroke="none"/>
+        <ellipse cx="${a.rex}" cy="${a.rey - 8}" rx="9" ry="15" fill="${p.u('main')}" stroke="none"/>
+        <ellipse cx="${a.rex}" cy="${a.rey - 7}" rx="5" ry="9" fill="${p.u('accent')}" stroke="none"/>
       ` },
       { name:'Puff', render:(a,p)=>`
         <ellipse cx="${a.lex}" cy="${a.ley+4}" rx="14" ry="12" fill="${p.u('main')}" stroke="none"/>
@@ -1117,6 +1099,14 @@ const PARTS = {
       { name:'Horns', render:(a,p)=>`
         <ellipse cx="${a.lex}" cy="${a.ley-10}" rx="6" ry="12" fill="${p.u('accent')}" stroke="none" transform="rotate(-12 ${a.lex} ${a.ley-10})"/>
         <ellipse cx="${a.rex}" cy="${a.rey-10}" rx="6" ry="12" fill="${p.u('accent')}" stroke="none" transform="rotate(12 ${a.rex} ${a.rey-10})"/>
+      ` },
+      { name:'Mini', render:(a,p)=>`
+        <ellipse cx="${a.lex2}" cy="${a.ley2}" rx="6" ry="5" fill="${p.u('accent')}" stroke="none"/>
+        <ellipse cx="${a.rex2}" cy="${a.rey2}" rx="6" ry="5" fill="${p.u('accent')}" stroke="none"/>
+      ` },
+      { name:'TopNubs', render:(a,p)=>`
+        <ellipse cx="${a.topLex}" cy="${a.topEy}" rx="8" ry="7" fill="${p.u('accent')}" stroke="none"/>
+        <ellipse cx="${a.topRex}" cy="${a.topEy}" rx="8" ry="7" fill="${p.u('accent')}" stroke="none"/>
       ` },
     ]
   },
@@ -1141,11 +1131,8 @@ const state = {
 // LIMB RULES (hands = full arm; feet = full leg)
 // ─────────────────────────────────────────────
 function applyLimbRulesToParts(parts) {
-  if (!parts) return;
-  if ((parts.hands || 0) > 0) parts.arms = 0;
-  if ((parts.feet || 0) > 0) parts.legs = 0;
-  if ((parts.arms || 0) > 0) parts.hands = 0;
-  if ((parts.legs || 0) > 0) parts.feet = 0;
+  // Arms+hands and legs+feet are independent — no mutual exclusivity.
+  // "None" (index 0) is the off switch for each part.
 }
 
 function applyLimbRules() {
@@ -1171,19 +1158,43 @@ function renderCharacter(s) {
   };
   const layers = [];
   const parts = s.parts;
-  const armLayer = (parts.hands || 0) > 0 ? get('hands', parts.hands) : get('arms', parts.arms);
-  const legLayer = (parts.feet || 0) > 0 ? get('feet', parts.feet) : get('legs', parts.legs);
 
+  // Feet offset: when legs are active, feet anchor at leg bottom (with slight overlap)
+  const LEG_TIP_OFFS = [0, 23, 26, 30, 25, 23];
+  const legIdx = Math.max(0, parts.legs || 0);
+  const legTipOff = legIdx > 0 ? Math.max(0, (LEG_TIP_OFFS[Math.min(legIdx, LEG_TIP_OFFS.length - 1)] || 0) - 10) : 0;
+  const footA = legTipOff > 0 ? Object.assign({}, a, { lly: a.lly + legTipOff, rly: a.rly + legTipOff }) : a;
+
+  // Hand offset: when arms are active, hands anchor at arm tip (with slight overlap)
+  const ARM_TIP_X = [0, 18, 22, 12, 34, 8];
+  const armIdx2 = Math.max(0, parts.arms || 0);
+  const armTipX = armIdx2 > 0 ? (ARM_TIP_X[Math.min(armIdx2, ARM_TIP_X.length - 1)] || 0) : 0;
+  const handA = armTipX > 0 ? Object.assign({}, a, {
+    shoulderLeft: a.shoulderLeft - armTipX + 4,
+    shoulderRight: a.shoulderRight + armTipX - 4,
+  }) : a;
+
+  const getWith = (key, idx, anchors) => {
+    const variants = PARTS[key].variants;
+    const i = Math.min(Math.max(0, idx), variants.length - 1);
+    return variants[i].render(anchors, p);
+  };
+
+  // Layer order (back → front): ears, hands, feet, legs, arms, body, head, eyes
   if (s.mode === 'two-piece') {
     layers.push(get('ears', parts.ears));
-    layers.push(legLayer);
-    layers.push(armLayer);
+    layers.push(getWith('hands', parts.hands, handA));
+    layers.push(getWith('feet', parts.feet, footA));
+    layers.push(get('legs', parts.legs));
+    layers.push(get('arms', parts.arms));
     layers.push(get('body', parts.body));
     layers.push(get('head', parts.head));
   } else {
     layers.push(get('ears', parts.ears));
-    layers.push(legLayer);
-    layers.push(armLayer);
+    layers.push(getWith('hands', parts.hands, handA));
+    layers.push(getWith('feet', parts.feet, footA));
+    layers.push(get('legs', parts.legs));
+    layers.push(get('arms', parts.arms));
     layers.push(get('body_onepiece', parts.body_onepiece));
   }
 
