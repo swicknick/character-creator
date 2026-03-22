@@ -465,6 +465,7 @@ const BODY_TWOPIC_BOUNDS = [
   { left: 54, right: 146, top: 109, bottom: 159 },
   { left: 64, right: 136, top: 94, bottom: 166 },
   { left: 70, right: 130, top: 90, bottom: 166 },
+  { left: 54, right: 142, top: 92, bottom: 162 },
 ];
 const BODY_ONEPIECE_BOUNDS = [
   { left: 58, right: 142, top: 48, bottom: 168 },
@@ -550,6 +551,7 @@ function twopieceShoulderLateral(bi, bx, by, sy) {
       const x0 = bx - 30, y0 = by - 38, w = 60, h = 76, rx = 30;
       return { left: rectLeftEdgeAtY(x0, y0, w, h, rx, sy), right: rectRightEdgeAtY(x0, y0, w, h, rx, sy) };
     }
+    case 6: return ellipseXLateral(bx, by - 2, 44, 36, sy);
     default: return ellipseXLateral(bx, by, 38, 33, sy);
   }
 }
@@ -588,10 +590,12 @@ function getAnchorsFromState(s) {
     const midY = B.top + 0.28 * (B.bottom - B.top);
     const shoulderY = B.top + 0.22 * (B.bottom - B.top);
     const { left: sl, right: sr } = onepieceShoulderLateral(bi, bx, by, shoulderY);
-    const footInset = 0.14 * (B.right - B.left);
-    const llx = B.left + footInset + 10;
-    const rlx = B.right - footInset - 10;
-    const lly = B.bottom - 3;
+    const llx = bx - 14;
+    const rlx = bx + 14;
+    const lly = B.bottom - 10;
+    const LEG_H_1P = [0, 23, 26, 30, 25, 23, 28];
+    const legIdx1p = Math.min(s.parts.legs || 0, LEG_H_1P.length - 1);
+    const feetBase1p = legIdx1p > 0 ? lly + LEG_H_1P[legIdx1p] : B.bottom;
     const hx = 100;
     const hy = B.top + 0.38 * (B.bottom - B.top);
     return {
@@ -610,6 +614,7 @@ function getAnchorsFromState(s) {
       rlx,
       lly,
       rly: lly,
+      feetBase: feetBase1p,
       lex: B.left + 16,
       rex: B.right - 16,
       ley: B.top + 22,
@@ -640,10 +645,12 @@ function getAnchorsFromState(s) {
   const headRight = hx + HEAD_LEFT[hi];
   const shoulderY = B.top + 0.26 * (B.bottom - B.top);
   const { left: sl, right: sr } = twopieceShoulderLateral(bi, bx, by, shoulderY);
-  const footInset = 0.12 * (B.right - B.left);
-  const llx = B.left + footInset + 8;
-  const rlx = B.right - footInset - 8;
-  const lly = B.bottom - 3;
+  const llx = bx - 14;
+  const rlx = bx + 14;
+  const lly = B.bottom - 10;
+  const LEG_H_2P = [0, 23, 26, 30, 25, 23, 28];
+  const legIdx2p = Math.min(s.parts.legs || 0, LEG_H_2P.length - 1);
+  const feetBase2p = legIdx2p > 0 ? lly + LEG_H_2P[legIdx2p] : B.bottom;
   const eyeDx = HEAD_EYE_DX[hi];
   const eyo = HEAD_EYE_YOFF[hi];
   const earX = HEAD_EAR_XOFF[hi];
@@ -671,6 +678,7 @@ function getAnchorsFromState(s) {
     rlx,
     lly,
     rly: lly,
+    feetBase: feetBase2p,
     lex: headLeft + earX,
     rex: headRight - earX,
     ley: hy - 8,
@@ -733,6 +741,11 @@ const PARTS = {
         <rect x="${a.bx-30}" y="${a.by-38}" width="60" height="76" rx="30" fill="${p.u('main')}" stroke="none"/>
         <ellipse cx="${a.bx}" cy="${a.by-18}" rx="16" ry="9" fill="${p.highlight}" opacity="0.22"/>
       ` },
+      { name:'Blob', render:(a,p)=>{
+        const bx=a.bx,by=a.by;
+        return `<path d="M${bx-10},${by-32} C${bx+18},${by-36} ${bx+44},${by-22} ${bx+42},${by} C${bx+40},${by+24} ${bx+28},${by+34} ${bx+8},${by+34} C${bx-14},${by+34} ${bx-38},${by+28} ${bx-42},${by+4} C${bx-46},${by-20} ${bx-28},${by-32} ${bx-10},${by-32} Z" fill="${p.u('main')}" stroke="none"/>
+        <ellipse cx="${bx+8}" cy="${by-14}" rx="16" ry="8" fill="${p.highlight}" opacity="0.22"/>`;
+      }},
     ]
   },
 
@@ -858,6 +871,10 @@ const PARTS = {
         <circle cx="${a.shoulderLeft + 2}" cy="${a.lay}" r="12" fill="${p.u('accent')}" stroke="none"/>
         <circle cx="${a.shoulderRight - 2}" cy="${a.ray}" r="12" fill="${p.u('accent')}" stroke="none"/>
       ` },
+      { name:'Noodle', render:(a,p)=>`
+        <path d="M${a.shoulderLeft},${a.lay} C${a.shoulderLeft-8},${a.lay+6} ${a.shoulderLeft-20},${a.lay+2} ${a.shoulderLeft-18},${a.lay+16}" stroke="${p.u('alt')}" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <path d="M${a.shoulderRight},${a.ray} C${a.shoulderRight+8},${a.ray+6} ${a.shoulderRight+20},${a.ray+2} ${a.shoulderRight+18},${a.ray+16}" stroke="${p.u('alt')}" stroke-width="10" fill="none" stroke-linecap="round"/>
+      ` },
     ]
   },
 
@@ -908,6 +925,12 @@ const PARTS = {
         <ellipse cx="${a.llx}" cy="${a.lly+12}" rx="9" ry="11" fill="${p.u('accent')}" stroke="none"/>
         <ellipse cx="${a.rlx}" cy="${a.rly+12}" rx="9" ry="11" fill="${p.u('accent')}" stroke="none"/>
       ` },
+      { name:'Tubes', render:(a,p)=>`
+        <rect x="${a.llx-7}" y="${a.lly}" width="14" height="28" rx="7" fill="${p.u('alt')}" stroke="none"/>
+        <rect x="${a.rlx-7}" y="${a.rly}" width="14" height="28" rx="7" fill="${p.u('alt')}" stroke="none"/>
+        <ellipse cx="${a.llx}" cy="${a.lly+5}" rx="7" ry="4" fill="${p.highlight}" opacity="0.18"/>
+        <ellipse cx="${a.rlx}" cy="${a.rly+5}" rx="7" ry="4" fill="${p.highlight}" opacity="0.18"/>
+      ` },
     ]
   },
 
@@ -916,24 +939,21 @@ const PARTS = {
     variants: [
       { name:'None', render:()=>'' },
       { name:'Circles', render:(a,p)=>`
-        <circle cx="${a.llx}" cy="${a.lly+19}" r="10" fill="${p.u('main')}" stroke="none"/>
-        <circle cx="${a.rlx}" cy="${a.rly+19}" r="10" fill="${p.u('main')}" stroke="none"/>
+        <circle cx="${a.llx}" cy="${a.feetBase+8}" r="10" fill="${p.u('main')}" stroke="none"/>
+        <circle cx="${a.rlx}" cy="${a.feetBase+8}" r="10" fill="${p.u('main')}" stroke="none"/>
       ` },
       { name:'Ovals', render:(a,p)=>`
-        <ellipse cx="${a.llx}" cy="${a.lly+19}" rx="14" ry="8" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.rlx}" cy="${a.rly+19}" rx="14" ry="8" fill="${p.u('main')}" stroke="none"/>
+        <ellipse cx="${a.llx}" cy="${a.feetBase+6}" rx="14" ry="8" fill="${p.u('main')}" stroke="none"/>
+        <ellipse cx="${a.rlx}" cy="${a.feetBase+6}" rx="14" ry="8" fill="${p.u('main')}" stroke="none"/>
       ` },
       { name:'Blocks', render:(a,p)=>`
-        <rect x="${a.llx-14}" y="${a.lly+16}" width="28" height="12" rx="5" fill="${p.u('alt')}" stroke="none"/>
-        <rect x="${a.rlx-14}" y="${a.rly+16}" width="28" height="12" rx="5" fill="${p.u('alt')}" stroke="none"/>
+        <rect x="${a.llx-14}" y="${a.feetBase}" width="28" height="12" rx="5" fill="${p.u('alt')}" stroke="none"/>
+        <rect x="${a.rlx-14}" y="${a.feetBase}" width="28" height="12" rx="5" fill="${p.u('alt')}" stroke="none"/>
       ` },
-      { name:'Triangles', render:(a,p)=>{
-        const lx=a.llx,ly=a.lly+18,rx=a.rlx,ry=a.rly+18;
-        return `
-          <polygon points="${lx-14},${ly+8} ${lx+14},${ly+8} ${lx},${ly-8}" fill="${p.u('accent')}" stroke="none"/>
-          <polygon points="${rx-14},${ry+8} ${rx+14},${ry+8} ${rx},${ry-8}" fill="${p.u('accent')}" stroke="none"/>
-        `;
-      }},
+      { name:'Stumps', render:(a,p)=>`
+        <rect x="${a.llx-12}" y="${a.feetBase}" width="24" height="12" rx="6" fill="${p.u('accent')}" stroke="none"/>
+        <rect x="${a.rlx-12}" y="${a.feetBase}" width="24" height="12" rx="6" fill="${p.u('accent')}" stroke="none"/>
+      ` },
     ]
   },
 
@@ -955,9 +975,11 @@ const PARTS = {
         <ellipse cx="${a.lex}" cy="${a.ley+4}" rx="14" ry="12" fill="${p.u('main')}" stroke="none"/>
         <ellipse cx="${a.rex}" cy="${a.rey+4}" rx="14" ry="12" fill="${p.u('main')}" stroke="none"/>
       ` },
-      { name:'Horns', render:(a,p)=>`
-        <polygon points="${a.lex-5},${a.ley+6} ${a.lex+5},${a.ley+6} ${a.lex},${a.ley-20}" fill="${p.u('accent')}" stroke="none"/>
-        <polygon points="${a.rex-5},${a.rey+6} ${a.rex+5},${a.rey+6} ${a.rex},${a.rey-20}" fill="${p.u('accent')}" stroke="none"/>
+      { name:'Antenna', render:(a,p)=>`
+        <rect x="${a.lex-2}" y="${a.ley-14}" width="4" height="16" rx="2" fill="${p.u('alt')}" stroke="none"/>
+        <circle cx="${a.lex}" cy="${a.ley-17}" r="5" fill="${p.u('accent')}" stroke="none"/>
+        <rect x="${a.rex-2}" y="${a.rey-14}" width="4" height="16" rx="2" fill="${p.u('alt')}" stroke="none"/>
+        <circle cx="${a.rex}" cy="${a.rey-17}" r="5" fill="${p.u('accent')}" stroke="none"/>
       ` },
     ]
   },
