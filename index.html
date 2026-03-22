@@ -177,8 +177,8 @@ main {
   padding: 30px;
 }
 .preview-card {
-  background: radial-gradient(ellipse 85% 75% at 50% 48%, rgba(99,102,241,0.22) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(34,211,238,0.12) 0%, transparent 45%),
+  background: radial-gradient(ellipse 85% 75% at 50% 48%, rgba(99,102,241,0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(34,211,238,0.06) 0%, transparent 45%),
     #0a0a12;
   border-radius: 28px;
   width: 280px;
@@ -245,7 +245,6 @@ main {
 .swatch-dot { width: 12px; height: 12px; border-radius: 50%; }
 
 /* Gallery */
-#gallery-panel { }
 .gallery-header {
   font-size: 10px;
   font-weight: 700;
@@ -323,6 +322,73 @@ main {
   z-index: 999;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-overlay.open { display: flex; }
+.modal-r100 {
+  background: #14141f;
+  border: 1px solid #2a2a3e;
+  border-radius: 14px;
+  width: min(920px, 96vw);
+  max-height: min(88vh, 900px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+}
+.modal-r100-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2a3e;
+  flex-shrink: 0;
+}
+.modal-r100-header h2 { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+.modal-r100-header p { font-size: 11px; color: #64748b; margin-top: 2px; }
+.modal-r100-close {
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1px solid #3a3a52;
+  background: #25253a;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+}
+.modal-r100-close:hover { background: #2e2e46; color: #e2e8f0; }
+.modal-r100-body { overflow-y: auto; padding: 14px 16px 18px; flex: 1; }
+.modal-r100-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 8px;
+}
+@media (max-width: 800px) {
+  .modal-r100-grid { grid-template-columns: repeat(5, 1fr); }
+}
+.r100-cell {
+  aspect-ratio: 1;
+  background: #0a0a12;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, transform 0.1s;
+  padding: 4px;
+}
+.r100-cell:hover { border-color: #6366f1; transform: scale(1.03); }
+.r100-cell svg { width: 100%; height: 100%; display: block; }
+.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -330,15 +396,18 @@ main {
 <header>
   <h1>Character Creator</h1>
   <div class="mode-toggle">
-    <button class="mode-btn active" data-mode="two-piece">Two-piece</button>
-    <button class="mode-btn" data-mode="one-piece">One-piece</button>
+    <button class="mode-btn" data-mode="two-piece">Two-piece</button>
+    <button class="mode-btn active" data-mode="one-piece">One-piece</button>
   </div>
   <div class="spacer"></div>
   <div class="dna-display" id="dna-display" title="Click to copy">
-    DNA <span id="dna-code">TAAAAAAAAAAAAAAA</span>
+    DNA <span id="dna-code">3OAAAAAAAAAAA2</span>
   </div>
   <button class="btn btn-ghost" id="btn-import">Import DNA</button>
-  <button class="btn btn-secondary" id="btn-randomize">🎲 Randomize</button>
+  <div class="header-actions">
+    <button class="btn btn-secondary" id="btn-randomize">🎲 Randomize</button>
+    <button class="btn btn-secondary" id="btn-randomize-100">Randomize 100</button>
+  </div>
   <button class="btn btn-secondary" id="btn-save">💾 Save</button>
   <button class="btn btn-primary" id="btn-export">↓ PNG</button>
 </header>
@@ -368,6 +437,21 @@ main {
 </main>
 
 <div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="modal-r100" aria-hidden="true">
+  <div class="modal-r100" role="dialog" aria-labelledby="r100-title">
+    <div class="modal-r100-header">
+      <div>
+        <h2 id="r100-title">100 random characters</h2>
+        <p>Scroll and click any tile to save it to your gallery and load it in the editor.</p>
+      </div>
+      <button type="button" class="modal-r100-close" id="btn-r100-close">Close</button>
+    </div>
+    <div class="modal-r100-body">
+      <div class="modal-r100-grid" id="r100-grid"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ─────────────────────────────────────────────
@@ -432,26 +516,47 @@ const PALETTES = [
   },
 ];
 
+function hexToRgb(hex) {
+  const h = String(hex).replace('#', '');
+  return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+}
+function rgbToHex(r, g, b) {
+  const x = (n) => Math.max(0, Math.min(255, n | 0)).toString(16).padStart(2, '0');
+  return `#${x(r)}${x(g)}${x(b)}`;
+}
+function mixHex(c1, c2, t) {
+  const A = hexToRgb(c1), B = hexToRgb(c2);
+  return rgbToHex(A.r + (B.r - A.r) * t, A.g + (B.g - A.g) * t, A.b + (B.b - A.b) * t);
+}
+
 function buildGradientDefs(pi) {
   const pal = PALETTES[pi];
   const mk = (id, spec) => {
-    const stops = spec.stops.map(([off, col]) => `<stop offset="${off}" stop-color="${col}"/>`).join('');
+    const [[o0, c0], [o1, c1]] = spec.stops;
+    const c0s = mixHex(c0, c1, 0.2);
+    const c1s = mixHex(c1, c0, 0.2);
+    const cMid = mixHex(c0, c1, 0.5);
+    const stops = `<stop offset="${o0}" stop-color="${c0s}"/><stop offset="50%" stop-color="${cMid}"/><stop offset="${o1}" stop-color="${c1s}"/>`;
     return `<linearGradient id="g${pi}_${id}" x1="${spec.x1}" y1="${spec.y1}" x2="${spec.x2}" y2="${spec.y2}" gradientUnits="objectBoundingBox">${stops}</linearGradient>`;
   };
-  const eyeGleam = `<radialGradient id="g${pi}_eye" cx="32%" cy="32%" r="65%" gradientUnits="objectBoundingBox">
-    <stop offset="0%" stop-color="${pal.highlight}"/>
-    <stop offset="55%" stop-color="${pal.strokeDeep}"/>
-    <stop offset="100%" stop-color="${pal.strokeDeep}"/>
-  </radialGradient>`;
-  return `<defs>${mk('main', pal.main)}${mk('alt', pal.alt)}${mk('accent', pal.accent)}${eyeGleam}</defs>`;
+  return `<defs>${mk('main', pal.main)}${mk('alt', pal.alt)}${mk('accent', pal.accent)}</defs>`;
 }
 
 function gurl(pi, name) { return `url(#g${pi}_${name})`; }
 
 const SCALE_INDEX_MAX = 55;
+/** Narrow band so scaled silhouettes stay inside the 200×200 viewBox. */
 function scaleFromIndex(si) {
   const s = Math.min(SCALE_INDEX_MAX, Math.max(0, si));
-  return 0.42 + (s / SCALE_INDEX_MAX) * 1.28;
+  return 0.82 + (s / SCALE_INDEX_MAX) * 0.2;
+}
+
+const SCALE_INDEX_RANDOM_MIN = 18;
+const SCALE_INDEX_RANDOM_MAX = 42;
+
+function effectiveScaleForState(s, raw) {
+  const cap = s.mode === 'one-piece' ? 0.98 : 1;
+  return Math.min(raw, cap);
 }
 
 // ─────────────────────────────────────────────
@@ -465,7 +570,8 @@ const BODY_TWOPIC_BOUNDS = [
   { left: 54, right: 146, top: 109, bottom: 159 },
   { left: 64, right: 136, top: 94, bottom: 166 },
   { left: 70, right: 130, top: 90, bottom: 166 },
-  { left: 54, right: 142, top: 92, bottom: 162 },
+  { left: 58, right: 142, top: 96, bottom: 161 },
+  { left: 70, right: 130, top: 92, bottom: 170 },
 ];
 const BODY_ONEPIECE_BOUNDS = [
   { left: 58, right: 142, top: 48, bottom: 168 },
@@ -475,6 +581,8 @@ const BODY_ONEPIECE_BOUNDS = [
   { left: 56, right: 144, top: 50, bottom: 166 },
   { left: 48, right: 152, top: 80, bottom: 136 },
   { left: 42, right: 158, top: 50, bottom: 166 },
+  { left: 52, right: 148, top: 46, bottom: 170 },
+  { left: 54, right: 146, top: 50, bottom: 170 },
 ];
 const HEAD_HBELOW = [27, 24, 23, 30, 26, 18, 22, 22];
 const HEAD_EYE_DX = [12, 10, 14, 9, 11, 12, 14, 10];
@@ -551,7 +659,8 @@ function twopieceShoulderLateral(bi, bx, by, sy) {
       const x0 = bx - 30, y0 = by - 38, w = 60, h = 76, rx = 30;
       return { left: rectLeftEdgeAtY(x0, y0, w, h, rx, sy), right: rectRightEdgeAtY(x0, y0, w, h, rx, sy) };
     }
-    case 6: return ellipseXLateral(bx, by - 2, 44, 36, sy);
+    case 6: return ellipseXLateral(bx, by, 40, 34, sy);
+    case 7: return ellipseXLateral(bx, by - 4, 32, 38, sy);
     default: return ellipseXLateral(bx, by, 38, 33, sy);
   }
 }
@@ -577,6 +686,8 @@ function onepieceShoulderLateral(bi, bx, by, sy) {
       return { left: rectLeftEdgeAtY(x0, y0, w, h, rx, sy), right: rectRightEdgeAtY(x0, y0, w, h, rx, sy) };
     }
     case 6: return ellipseXLateral(bx, by, 58, 58, sy);
+    case 7: return ellipseXLateral(bx, by + 2, 44, 58, sy);
+    case 8: return ellipseXLateral(bx, by + 4, 40, 56, sy);
     default: return ellipseXLateral(bx, by, 42, 60, sy);
   }
 }
@@ -588,14 +699,19 @@ function getAnchorsFromState(s) {
     const bi = Math.min(Math.max(0, s.parts.body_onepiece || 0), BODY_ONEPIECE_BOUNDS.length - 1);
     const B = BODY_ONEPIECE_BOUNDS[bi];
     const midY = B.top + 0.28 * (B.bottom - B.top);
-    const shoulderY = B.top + 0.22 * (B.bottom - B.top);
-    const { left: sl, right: sr } = onepieceShoulderLateral(bi, bx, by, shoulderY);
-    const llx = bx - 14;
-    const rlx = bx + 14;
-    const lly = B.bottom - 10;
-    const LEG_H_1P = [0, 23, 26, 30, 25, 23, 28];
-    const legIdx1p = Math.min(s.parts.legs || 0, LEG_H_1P.length - 1);
-    const feetBase1p = legIdx1p > 0 ? lly + LEG_H_1P[legIdx1p] - 8 : B.bottom;
+    let shoulderY = B.top + 0.38 * (B.bottom - B.top);
+    const earIdx = s.parts.ears || 0;
+    if (earIdx > 0) shoulderY += 8;
+    let { left: sl, right: sr } = onepieceShoulderLateral(bi, bx, by, shoulderY);
+    if (earIdx > 0) {
+      const earIn = 6 + Math.min(3, earIdx);
+      sl += earIn;
+      sr -= earIn;
+    }
+    const footInset = 0.14 * (B.right - B.left);
+    const llx = B.left + footInset + 10;
+    const rlx = B.right - footInset - 10;
+    const lly = B.bottom - 12;
     const hx = 100;
     const hy = B.top + 0.38 * (B.bottom - B.top);
     return {
@@ -614,7 +730,6 @@ function getAnchorsFromState(s) {
       rlx,
       lly,
       rly: lly,
-      feetBase: feetBase1p,
       lex: B.left + 16,
       rex: B.right - 16,
       ley: B.top + 22,
@@ -625,11 +740,11 @@ function getAnchorsFromState(s) {
       rEy: hy - 2,
       shoulderLeft: sl,
       shoulderRight: sr,
-      armOutL: sl - 20,
-      armOutR: sr + 20,
-      hmxL: sl - 29,
-      hmxR: sr + 29,
-      hmy: shoulderY + 6,
+      armOutL: sl - 18,
+      armOutR: sr + 18,
+      hmxL: sl - 24,
+      hmxR: sr + 24,
+      hmy: shoulderY + 12,
       neck: null,
     };
   }
@@ -643,21 +758,26 @@ function getAnchorsFromState(s) {
   const hx = 100;
   const headLeft = hx - HEAD_LEFT[hi];
   const headRight = hx + HEAD_LEFT[hi];
-  const shoulderY = B.top + 0.26 * (B.bottom - B.top);
-  const { left: sl, right: sr } = twopieceShoulderLateral(bi, bx, by, shoulderY);
-  const llx = bx - 14;
-  const rlx = bx + 14;
-  const lly = B.bottom - 10;
-  const LEG_H_2P = [0, 23, 26, 30, 25, 23, 28];
-  const legIdx2p = Math.min(s.parts.legs || 0, LEG_H_2P.length - 1);
-  const feetBase2p = legIdx2p > 0 ? lly + LEG_H_2P[legIdx2p] - 8 : B.bottom;
+  let shoulderY = B.top + 0.42 * (B.bottom - B.top);
+  const earIdx2 = s.parts.ears || 0;
+  if (earIdx2 > 0) shoulderY += 8;
+  let { left: sl, right: sr } = twopieceShoulderLateral(bi, bx, by, shoulderY);
+  if (earIdx2 > 0) {
+    const earIn = 6 + Math.min(3, earIdx2);
+    sl += earIn;
+    sr -= earIn;
+  }
+  const footInset = 0.12 * (B.right - B.left);
+  const llx = B.left + footInset + 8;
+  const rlx = B.right - footInset - 8;
+  const lly = B.bottom - 12;
   const eyeDx = HEAD_EYE_DX[hi];
   const eyo = HEAD_EYE_YOFF[hi];
   const earX = HEAD_EAR_XOFF[hi];
   const bl = B.left;
   const br = B.right;
-  const armOutL = sl - 20;
-  const armOutR = sr + 20;
+  const armOutL = sl - 16;
+  const armOutR = sr + 16;
   return {
     bx,
     by,
@@ -678,7 +798,6 @@ function getAnchorsFromState(s) {
     rlx,
     lly,
     rly: lly,
-    feetBase: feetBase2p,
     lex: headLeft + earX,
     rex: headRight - earX,
     ley: hy - 8,
@@ -691,9 +810,9 @@ function getAnchorsFromState(s) {
     shoulderRight: sr,
     armOutL,
     armOutR,
-    hmxL: armOutL - 9,
-    hmxR: armOutR + 9,
-    hmy: shoulderY + 6,
+    hmxL: armOutL - 6,
+    hmxR: armOutR + 6,
+    hmy: shoulderY + 12,
     neck: {
       x: hx - 14,
       y: bodyTop - 1,
@@ -701,12 +820,6 @@ function getAnchorsFromState(s) {
       h: LAYOUT_OVERLAP + 8,
     },
   };
-}
-
-function neckBridgeSvg(a, p) {
-  if (!a.neck) return '';
-  const n = a.neck;
-  return `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="7" fill="${p.u('alt')}" stroke="none"/>`;
 }
 
 // ─────────────────────────────────────────────
@@ -719,33 +832,30 @@ const PARTS = {
     variants: [
       { name:'Round', render:(a,p)=>`
         <ellipse cx="${a.bx}" cy="${a.by}" rx="38" ry="33" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.bx}" cy="${a.by-10}" rx="22" ry="10" fill="${p.highlight}" opacity="0.28"/>
       ` },
       { name:'Tall', render:(a,p)=>`
         <ellipse cx="${a.bx}" cy="${a.by+2}" rx="27" ry="42" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.bx}" cy="${a.by-12}" rx="14" ry="9" fill="${p.highlight}" opacity="0.26"/>
       ` },
       { name:'Boxy', render:(a,p)=>`
         <rect x="${a.bx-36}" y="${a.by-31}" width="72" height="63" rx="18" fill="${p.u('main')}" stroke="none"/>
-        <rect x="${a.bx-20}" y="${a.by-23}" width="40" height="18" rx="9" fill="${p.highlight}" opacity="0.22"/>
       ` },
       { name:'Wide', render:(a,p)=>`
         <ellipse cx="${a.bx}" cy="${a.by+6}" rx="46" ry="25" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.bx}" cy="${a.by}" rx="28" ry="9" fill="${p.highlight}" opacity="0.22"/>
       ` },
       { name:'Circle', render:(a,p)=>`
         <circle cx="${a.bx}" cy="${a.by+2}" r="36" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.bx}" cy="${a.by-8}" rx="18" ry="10" fill="${p.highlight}" opacity="0.24"/>
       ` },
       { name:'Capsule', render:(a,p)=>`
         <rect x="${a.bx-30}" y="${a.by-38}" width="60" height="76" rx="30" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.bx}" cy="${a.by-18}" rx="16" ry="9" fill="${p.highlight}" opacity="0.22"/>
       ` },
-      { name:'Blob', render:(a,p)=>{
+      { name:'Pear', render:(a,p)=>{
         const bx=a.bx,by=a.by;
-        return `<path d="M${bx-10},${by-32} C${bx+18},${by-36} ${bx+44},${by-22} ${bx+42},${by} C${bx+40},${by+24} ${bx+28},${by+34} ${bx+8},${by+34} C${bx-14},${by+34} ${bx-38},${by+28} ${bx-42},${by+4} C${bx-46},${by-20} ${bx-28},${by-32} ${bx-10},${by-32} Z" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${bx+8}" cy="${by-14}" rx="16" ry="8" fill="${p.highlight}" opacity="0.22"/>`;
+        return `<path d="M${bx},${by-32} C${bx+11},${by-32} ${bx+30},${by-16} ${bx+32},${by+2} C${bx+36},${by+22} ${bx+42},${by+30} ${bx+42},${by+33} C${bx+42},${by+44} ${bx+25},${by+38} ${bx},${by+38} C${bx-25},${by+38} ${bx-42},${by+44} ${bx-42},${by+33} C${bx-42},${by+30} ${bx-36},${by+22} ${bx-32},${by+2} C${bx-30},${by-16} ${bx-11},${by-32} ${bx},${by-32} Z" fill="${p.u('main')}" stroke="none"/>`;
       }},
+      { name:'Lightbulb', render:(a,p)=>`
+        <ellipse cx="${a.bx}" cy="${a.by-14}" rx="32" ry="26" fill="${p.u('main')}" stroke="none"/>
+        <rect x="${a.bx-24}" y="${a.by-6}" width="48" height="48" rx="20" fill="${p.u('main')}" stroke="none"/>
+      ` },
     ]
   },
 
@@ -754,11 +864,9 @@ const PARTS = {
     variants: [
       { name:'Oval', render:(a,p)=>`
         <ellipse cx="${a.bx}" cy="${a.by}" rx="42" ry="60" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.bx}" cy="${a.by-22}" rx="22" ry="12" fill="${p.highlight}" opacity="0.25"/>
       ` },
       { name:'Pillar', render:(a,p)=>`
         <rect x="${a.bx-36}" y="${a.by-58}" width="72" height="116" rx="28" fill="${p.u('main')}" stroke="none"/>
-        <rect x="${a.bx-20}" y="${a.by-48}" width="40" height="26" rx="13" fill="${p.highlight}" opacity="0.22"/>
       ` },
       { name:'Egg', render:(a,p)=>{
         const bx=a.bx,by=a.by;
@@ -766,19 +874,23 @@ const PARTS = {
       }},
       { name:'Capsule', render:(a,p)=>`
         <rect x="${a.bx-34}" y="${a.by-62}" width="68" height="124" rx="34" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.bx}" cy="${a.by-36}" rx="20" ry="11" fill="${p.highlight}" opacity="0.22"/>
       ` },
       { name:'Squircle', render:(a,p)=>`
         <rect x="${a.bx-44}" y="${a.by-58}" width="88" height="116" rx="36" fill="${p.u('main')}" stroke="none"/>
-        <rect x="${a.bx-22}" y="${a.by-46}" width="44" height="22" rx="11" fill="${p.highlight}" opacity="0.2"/>
       ` },
       { name:'Pill', render:(a,p)=>`
         <rect x="${a.bx-52}" y="${a.by-28}" width="104" height="56" rx="28" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.bx}" cy="${a.by-8}" rx="30" ry="12" fill="${p.highlight}" opacity="0.22"/>
       ` },
       { name:'Circle', render:(a,p)=>`
         <circle cx="${a.bx}" cy="${a.by}" r="58" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.bx}" cy="${a.by-28}" rx="24" ry="13" fill="${p.highlight}" opacity="0.24"/>
+      ` },
+      { name:'Bean', render:(a,p)=>{
+        const bx=a.bx,by=a.by;
+        return `<path d="M${bx+6},${by-60} C${bx+30},${by-60} ${bx+46},${by-40} ${bx+46},${by-16} C${bx+46},${by+6} ${bx+36},${by+18} ${bx+42},${by+36} C${bx+48},${by+54} ${bx+28},${by+62} ${bx+4},${by+60} C${bx-22},${by+58} ${bx-46},${by+44} ${bx-46},${by+20} C${bx-46},${by+2} ${bx-34},${by-10} ${bx-38},${by-30} C${bx-42},${by-52} ${bx-18},${by-60} ${bx+6},${by-60} Z" fill="${p.u('main')}" stroke="none"/>`;
+      }},
+      { name:'Duo', render:(a,p)=>`
+        <ellipse cx="${a.bx}" cy="${a.by-24}" rx="38" ry="32" fill="${p.u('main')}" stroke="none"/>
+        <ellipse cx="${a.bx}" cy="${a.by+22}" rx="44" ry="40" fill="${p.u('main')}" stroke="none"/>
       ` },
     ]
   },
@@ -790,7 +902,7 @@ const PARTS = {
         <circle cx="${a.hx}" cy="${a.hy}" r="27" fill="${p.u('alt')}" stroke="none"/>
       ` },
       { name:'Squarish', render:(a,p)=>`
-        <rect x="${a.hx-24}" y="${a.hy-24}" width="48" height="48" rx="15" fill="${p.u('alt')}" stroke="none"/>
+        <rect x="${a.hx-24}" y="${a.hy-24}" width="48" height="48" rx="16" fill="${p.u('alt')}" stroke="none"/>
       ` },
       { name:'Oval H', render:(a,p)=>`
         <ellipse cx="${a.hx}" cy="${a.hy}" rx="32" ry="23" fill="${p.u('alt')}" stroke="none"/>
@@ -817,32 +929,36 @@ const PARTS = {
     label: 'Eyes',
     variants: [
       { name:'Dots', render:(a,p)=>`
-        <circle cx="${a.lEx}" cy="${a.lEy}" r="5.5" fill="${p.u('eye')}"/>
-        <circle cx="${a.rEx}" cy="${a.rEy}" r="5.5" fill="${p.u('eye')}"/>
+        <circle cx="${a.lEx}" cy="${a.lEy}" r="3.2" fill="${p.stroke}"/>
+        <circle cx="${a.lEx+0.9}" cy="${a.lEy-0.9}" r="0.85" fill="${p.highlight}"/>
+        <circle cx="${a.rEx}" cy="${a.rEy}" r="3.2" fill="${p.stroke}"/>
+        <circle cx="${a.rEx+0.9}" cy="${a.rEy-0.9}" r="0.85" fill="${p.highlight}"/>
       ` },
       { name:'Wide', render:(a,p)=>`
-        <circle cx="${a.lEx}" cy="${a.lEy}" r="8" fill="${p.u('eye')}"/>
-        <circle cx="${a.rEx}" cy="${a.rEy}" r="8" fill="${p.u('eye')}"/>
+        <ellipse cx="${a.lEx}" cy="${a.lEy}" rx="4.2" ry="4.2" fill="${p.highlight}" stroke="${p.stroke}" stroke-width="1.6"/>
+        <ellipse cx="${a.lEx}" cy="${a.lEy}" rx="2.2" ry="2.2" fill="${p.stroke}"/>
+        <circle cx="${a.lEx+1.1}" cy="${a.lEy-1.1}" r="0.85" fill="${p.highlight}"/>
+        <ellipse cx="${a.rEx}" cy="${a.rEy}" rx="4.2" ry="4.2" fill="${p.highlight}" stroke="${p.stroke}" stroke-width="1.6"/>
+        <ellipse cx="${a.rEx}" cy="${a.rEy}" rx="2.2" ry="2.2" fill="${p.stroke}"/>
+        <circle cx="${a.rEx+1.1}" cy="${a.rEy-1.1}" r="0.85" fill="${p.highlight}"/>
       ` },
       { name:'Sleepy', render:(a,p)=>`
-        <path d="M${a.lEx-6},${a.lEy+1} A6,5 0 0,1 ${a.lEx+6},${a.lEy+1}" fill="${p.stroke}"/>
-        <path d="M${a.rEx-6},${a.rEy+1} A6,5 0 0,1 ${a.rEx+6},${a.rEy+1}" fill="${p.stroke}"/>
+        <path d="M${a.lEx-5.5},${a.lEy} Q${a.lEx},${a.lEy+4.2} ${a.lEx+5.5},${a.lEy}" fill="${p.stroke}"/>
+        <path d="M${a.rEx-5.5},${a.rEy} Q${a.rEx},${a.rEy+4.2} ${a.rEx+5.5},${a.rEy}" fill="${p.stroke}"/>
       ` },
       { name:'Ring', render:(a,p)=>`
-        <circle cx="${a.lEx}" cy="${a.lEy}" r="7" fill="none" stroke="${p.stroke}" stroke-width="3"/>
-        <circle cx="${a.rEx}" cy="${a.rEy}" r="7" fill="none" stroke="${p.stroke}" stroke-width="3"/>
+        <ellipse cx="${a.lEx}" cy="${a.lEy}" rx="4.5" ry="5.5" fill="none" stroke="${p.stroke}" stroke-width="1.8"/>
+        <ellipse cx="${a.rEx}" cy="${a.rEy}" rx="4.5" ry="5.5" fill="none" stroke="${p.stroke}" stroke-width="1.8"/>
       ` },
-      { name:'X Eyes', render:(a,p)=>{
-        const s=5;
-        function xeye(cx,cy){return `
-          <line x1="${cx-s}" y1="${cy-s}" x2="${cx+s}" y2="${cy+s}" stroke="${p.stroke}" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="${cx+s}" y1="${cy-s}" x2="${cx-s}" y2="${cy+s}" stroke="${p.stroke}" stroke-width="2.5" stroke-linecap="round"/>
-        `;}
-        return xeye(a.lEx,a.lEy)+xeye(a.rEx,a.rEy);
-      }},
+      { name:'Narrow', render:(a,p)=>`
+        <ellipse cx="${a.lEx}" cy="${a.lEy}" rx="4" ry="2.2" fill="${p.stroke}"/>
+        <ellipse cx="${a.rEx}" cy="${a.rEy}" rx="4" ry="2.2" fill="${p.stroke}"/>
+      ` },
       { name:'Oval', render:(a,p)=>`
-        <ellipse cx="${a.lEx}" cy="${a.lEy}" rx="6" ry="8" fill="${p.u('eye')}"/>
-        <ellipse cx="${a.rEx}" cy="${a.rEy}" rx="6" ry="8" fill="${p.u('eye')}"/>
+        <ellipse cx="${a.lEx}" cy="${a.lEy}" rx="3.4" ry="4.6" fill="${p.highlight}" stroke="${p.stroke}" stroke-width="1.5"/>
+        <ellipse cx="${a.lEx}" cy="${a.lEy+0.5}" rx="1.6" ry="2.4" fill="${p.stroke}"/>
+        <ellipse cx="${a.rEx}" cy="${a.rEy}" rx="3.4" ry="4.6" fill="${p.highlight}" stroke="${p.stroke}" stroke-width="1.5"/>
+        <ellipse cx="${a.rEx}" cy="${a.rEy+0.5}" rx="1.6" ry="2.4" fill="${p.stroke}"/>
       ` },
     ]
   },
@@ -871,10 +987,6 @@ const PARTS = {
         <circle cx="${a.shoulderLeft + 2}" cy="${a.lay}" r="12" fill="${p.u('accent')}" stroke="none"/>
         <circle cx="${a.shoulderRight - 2}" cy="${a.ray}" r="12" fill="${p.u('accent')}" stroke="none"/>
       ` },
-      { name:'Noodle', render:(a,p)=>`
-        <path d="M${a.shoulderLeft},${a.lay} C${a.shoulderLeft-8},${a.lay+6} ${a.shoulderLeft-20},${a.lay+2} ${a.shoulderLeft-18},${a.lay+16}" stroke="${p.u('alt')}" stroke-width="10" fill="none" stroke-linecap="round"/>
-        <path d="M${a.shoulderRight},${a.ray} C${a.shoulderRight+8},${a.ray+6} ${a.shoulderRight+20},${a.ray+2} ${a.shoulderRight+18},${a.ray+16}" stroke="${p.u('alt')}" stroke-width="10" fill="none" stroke-linecap="round"/>
-      ` },
     ]
   },
 
@@ -882,22 +994,39 @@ const PARTS = {
     label: 'Hands',
     variants: [
       { name:'None', render:()=>'' },
-      { name:'Mitts', render:(a,p)=>`
-        <circle cx="${a.hmxL}" cy="${a.hmy}" r="9" fill="${p.u('main')}" stroke="none"/>
-        <circle cx="${a.hmxR}" cy="${a.hmy}" r="9" fill="${p.u('main')}" stroke="none"/>
-      ` },
-      { name:'Pads', render:(a,p)=>`
-        <rect x="${a.hmxL - 10}" y="${a.lay}" width="20" height="14" rx="6" fill="${p.u('accent')}" stroke="none"/>
-        <rect x="${a.hmxR - 10}" y="${a.ray}" width="20" height="14" rx="6" fill="${p.u('accent')}" stroke="none"/>
-      ` },
-      { name:'Paws', render:(a,p)=>`
-        <rect x="${a.hmxL - 11}" y="${a.lay+2}" width="22" height="16" rx="8" fill="${p.u('alt')}" stroke="none"/>
-        <rect x="${a.hmxR - 11}" y="${a.ray+2}" width="22" height="16" rx="8" fill="${p.u('alt')}" stroke="none"/>
-      ` },
-      { name:'Blocks', render:(a,p)=>`
-        <rect x="${a.hmxL - 8}" y="${a.lay+2}" width="16" height="16" rx="8" fill="${p.u('alt')}" stroke="none"/>
-        <rect x="${a.hmxR - 8}" y="${a.ray+2}" width="16" height="16" rx="8" fill="${p.u('alt')}" stroke="none"/>
-      ` },
+      { name:'Mitts', render:(a,p)=>{
+        const mxl = (a.shoulderLeft + a.hmxL) / 2, myl = (a.lay + a.hmy) / 2;
+        const mxr = (a.shoulderRight + a.hmxR) / 2, myr = (a.ray + a.hmy) / 2;
+        return `
+        <path d="M${a.shoulderLeft},${a.lay} Q${mxl - 12},${myl} ${a.hmxL},${a.hmy} Q${mxl + 14},${myl} ${a.shoulderLeft},${a.lay} Z" fill="${p.u('main')}" stroke="none"/>
+        <path d="M${a.shoulderRight},${a.ray} Q${mxr + 12},${myr} ${a.hmxR},${a.hmy} Q${mxr - 14},${myr} ${a.shoulderRight},${a.ray} Z" fill="${p.u('main')}" stroke="none"/>
+        `;
+      }},
+      { name:'Pads', render:(a,p)=>{
+        const hyL = a.lay + (a.hmy - a.lay) * 0.85, hyR = a.ray + (a.hmy - a.ray) * 0.85;
+        const mxl = (a.shoulderLeft + a.hmxL) / 2, myl = (a.lay + hyL) / 2;
+        const mxr = (a.shoulderRight + a.hmxR) / 2, myr = (a.ray + hyR) / 2;
+        return `
+        <path d="M${a.shoulderLeft},${a.lay} Q${mxl - 14},${myl} ${a.hmxL},${hyL} Q${mxl + 16},${myl} ${a.shoulderLeft},${a.lay} Z" fill="${p.u('accent')}" stroke="none"/>
+        <path d="M${a.shoulderRight},${a.ray} Q${mxr + 14},${myr} ${a.hmxR},${hyR} Q${mxr - 16},${myr} ${a.shoulderRight},${a.ray} Z" fill="${p.u('accent')}" stroke="none"/>
+        `;
+      }},
+      { name:'Paws', render:(a,p)=>{
+        const mxl = (a.shoulderLeft + a.hmxL) / 2, myl = (a.lay + a.hmy) / 2;
+        const mxr = (a.shoulderRight + a.hmxR) / 2, myr = (a.ray + a.hmy) / 2;
+        return `
+        <path d="M${a.shoulderLeft},${a.lay} Q${mxl - 10},${myl} ${a.hmxL},${a.hmy} Q${mxl + 12},${myl} ${a.shoulderLeft},${a.lay} Z" fill="${p.u('alt')}" stroke="none"/>
+        <path d="M${a.shoulderRight},${a.ray} Q${mxr + 10},${myr} ${a.hmxR},${a.hmy} Q${mxr - 12},${myr} ${a.shoulderRight},${a.ray} Z" fill="${p.u('alt')}" stroke="none"/>
+        `;
+      }},
+      { name:'Blocks', render:(a,p)=>{
+        const mxl = (a.shoulderLeft + a.hmxL) / 2, myl = (a.lay + a.hmy) / 2;
+        const mxr = (a.shoulderRight + a.hmxR) / 2, myr = (a.ray + a.hmy) / 2;
+        return `
+        <path d="M${a.shoulderLeft},${a.lay} Q${mxl - 8},${myl} ${a.hmxL},${a.hmy} Q${mxl + 10},${myl} ${a.shoulderLeft},${a.lay} Z" fill="${p.u('alt')}" stroke="none"/>
+        <path d="M${a.shoulderRight},${a.ray} Q${mxr + 8},${myr} ${a.hmxR},${a.hmy} Q${mxr - 10},${myr} ${a.shoulderRight},${a.ray} Z" fill="${p.u('alt')}" stroke="none"/>
+        `;
+      }},
     ]
   },
 
@@ -914,22 +1043,16 @@ const PARTS = {
         <rect x="${a.rlx-5}" y="${a.rly}" width="10" height="26" rx="5" fill="${p.u('alt')}" stroke="none"/>
       ` },
       { name:'Plank', render:(a,p)=>`
-        <rect x="${a.llx-12}" y="${a.lly}" width="24" height="30" rx="12" fill="${p.u('main')}" stroke="none"/>
-        <rect x="${a.rlx-12}" y="${a.rly}" width="24" height="30" rx="12" fill="${p.u('main')}" stroke="none"/>
+        <rect x="${a.llx-12}" y="${a.lly}" width="24" height="30" rx="8" fill="${p.u('main')}" stroke="none"/>
+        <rect x="${a.rlx-12}" y="${a.rly}" width="24" height="30" rx="8" fill="${p.u('main')}" stroke="none"/>
       ` },
       { name:'Chunky', render:(a,p)=>`
-        <rect x="${a.llx-9}" y="${a.lly}" width="18" height="25" rx="9" fill="${p.u('main')}" stroke="none"/>
-        <rect x="${a.rlx-9}" y="${a.rly}" width="18" height="25" rx="9" fill="${p.u('main')}" stroke="none"/>
+        <rect x="${a.llx-9}" y="${a.lly}" width="18" height="25" rx="7" fill="${p.u('main')}" stroke="none"/>
+        <rect x="${a.rlx-9}" y="${a.rly}" width="18" height="25" rx="7" fill="${p.u('main')}" stroke="none"/>
       ` },
       { name:'Semis', render:(a,p)=>`
         <ellipse cx="${a.llx}" cy="${a.lly+12}" rx="9" ry="11" fill="${p.u('accent')}" stroke="none"/>
         <ellipse cx="${a.rlx}" cy="${a.rly+12}" rx="9" ry="11" fill="${p.u('accent')}" stroke="none"/>
-      ` },
-      { name:'Tubes', render:(a,p)=>`
-        <rect x="${a.llx-7}" y="${a.lly}" width="14" height="28" rx="7" fill="${p.u('alt')}" stroke="none"/>
-        <rect x="${a.rlx-7}" y="${a.rly}" width="14" height="28" rx="7" fill="${p.u('alt')}" stroke="none"/>
-        <ellipse cx="${a.llx}" cy="${a.lly+5}" rx="7" ry="4" fill="${p.highlight}" opacity="0.18"/>
-        <ellipse cx="${a.rlx}" cy="${a.rly+5}" rx="7" ry="4" fill="${p.highlight}" opacity="0.18"/>
       ` },
     ]
   },
@@ -938,22 +1061,38 @@ const PARTS = {
     label: 'Feet',
     variants: [
       { name:'None', render:()=>'' },
-      { name:'Circles', render:(a,p)=>`
-        <circle cx="${a.llx}" cy="${a.feetBase+8}" r="10" fill="${p.u('main')}" stroke="none"/>
-        <circle cx="${a.rlx}" cy="${a.feetBase+8}" r="10" fill="${p.u('main')}" stroke="none"/>
-      ` },
-      { name:'Ovals', render:(a,p)=>`
-        <ellipse cx="${a.llx}" cy="${a.feetBase+6}" rx="14" ry="8" fill="${p.u('main')}" stroke="none"/>
-        <ellipse cx="${a.rlx}" cy="${a.feetBase+6}" rx="14" ry="8" fill="${p.u('main')}" stroke="none"/>
-      ` },
-      { name:'Blocks', render:(a,p)=>`
-        <rect x="${a.llx-14}" y="${a.feetBase}" width="28" height="12" rx="5" fill="${p.u('alt')}" stroke="none"/>
-        <rect x="${a.rlx-14}" y="${a.feetBase}" width="28" height="12" rx="5" fill="${p.u('alt')}" stroke="none"/>
-      ` },
-      { name:'Stumps', render:(a,p)=>`
-        <rect x="${a.llx-12}" y="${a.feetBase}" width="24" height="12" rx="6" fill="${p.u('accent')}" stroke="none"/>
-        <rect x="${a.rlx-12}" y="${a.feetBase}" width="24" height="12" rx="6" fill="${p.u('accent')}" stroke="none"/>
-      ` },
+      { name:'Circles', render:(a,p)=>{
+        const tyl = a.lly + 19, tyr = a.rly + 19;
+        const ml = (a.lly + tyl) / 2, mr = (a.rly + tyr) / 2;
+        return `
+        <path d="M${a.llx},${a.lly} Q${a.llx-9},${ml} ${a.llx-2},${tyl} Q${a.llx+11},${ml} ${a.llx},${a.lly} Z" fill="${p.u('main')}" stroke="none"/>
+        <path d="M${a.rlx},${a.rly} Q${a.rlx+9},${mr} ${a.rlx+2},${tyr} Q${a.rlx-11},${mr} ${a.rlx},${a.rly} Z" fill="${p.u('main')}" stroke="none"/>
+        `;
+      }},
+      { name:'Ovals', render:(a,p)=>{
+        const tyl = a.lly + 20, tyr = a.rly + 20;
+        const ml = (a.lly + tyl) / 2, mr = (a.rly + tyr) / 2;
+        return `
+        <path d="M${a.llx},${a.lly} Q${a.llx-11},${ml} ${a.llx-4},${tyl} Q${a.llx+13},${ml} ${a.llx},${a.lly} Z" fill="${p.u('main')}" stroke="none"/>
+        <path d="M${a.rlx},${a.rly} Q${a.rlx+11},${mr} ${a.rlx+4},${tyr} Q${a.rlx-13},${mr} ${a.rlx},${a.rly} Z" fill="${p.u('main')}" stroke="none"/>
+        `;
+      }},
+      { name:'Blocks', render:(a,p)=>{
+        const tyl = a.lly + 21, tyr = a.rly + 21;
+        const ml = (a.lly + tyl) / 2, mr = (a.rly + tyr) / 2;
+        return `
+        <path d="M${a.llx},${a.lly} Q${a.llx-10},${ml} ${a.llx-6},${tyl} Q${a.llx+14},${ml} ${a.llx},${a.lly} Z" fill="${p.u('alt')}" stroke="none"/>
+        <path d="M${a.rlx},${a.rly} Q${a.rlx+10},${mr} ${a.rlx+6},${tyr} Q${a.rlx-14},${mr} ${a.rlx},${a.rly} Z" fill="${p.u('alt')}" stroke="none"/>
+        `;
+      }},
+      { name:'Triangles', render:(a,p)=>{
+        const tyl = a.lly + 19, tyr = a.rly + 19;
+        const ml = (a.lly + tyl) / 2, mr = (a.rly + tyr) / 2;
+        return `
+        <path d="M${a.llx},${a.lly} Q${a.llx-12},${ml} ${a.llx-4},${tyl} Q${a.llx+14},${ml} ${a.llx},${a.lly} Z" fill="${p.u('accent')}" stroke="none"/>
+        <path d="M${a.rlx},${a.rly} Q${a.rlx+12},${mr} ${a.rlx+4},${tyr} Q${a.rlx-14},${mr} ${a.rlx},${a.rly} Z" fill="${p.u('accent')}" stroke="none"/>
+        `;
+      }},
     ]
   },
 
@@ -966,20 +1105,18 @@ const PARTS = {
         <ellipse cx="${a.rex}" cy="${a.rey}" rx="12" ry="11" fill="${p.u('accent')}" stroke="none"/>
       ` },
       { name:'Pointed', render:(a,p)=>`
-        <path d="M${a.lex},${a.ley+8} C${a.lex-16},${a.ley+4} ${a.lex-10},${a.ley-18} ${a.lex},${a.ley-18} C${a.lex+10},${a.ley-18} ${a.lex+16},${a.ley+4} ${a.lex},${a.ley+8} Z" fill="${p.u('main')}" stroke="none"/>
-        <path d="M${a.lex},${a.ley+4} C${a.lex-8},${a.ley+2} ${a.lex-5},${a.ley-10} ${a.lex},${a.ley-10} C${a.lex+5},${a.ley-10} ${a.lex+8},${a.ley+2} ${a.lex},${a.ley+4} Z" fill="${p.u('accent')}" stroke="none"/>
-        <path d="M${a.rex},${a.rey+8} C${a.rex-16},${a.rey+4} ${a.rex-10},${a.rey-18} ${a.rex},${a.rey-18} C${a.rex+10},${a.rey-18} ${a.rex+16},${a.rey+4} ${a.rex},${a.rey+8} Z" fill="${p.u('main')}" stroke="none"/>
-        <path d="M${a.rex},${a.rey+4} C${a.rex-8},${a.rey+2} ${a.rex-5},${a.rey-10} ${a.rex},${a.rey-10} C${a.rex+5},${a.rey-10} ${a.rex+8},${a.rey+2} ${a.rex},${a.rey+4} Z" fill="${p.u('accent')}" stroke="none"/>
+        <path d="M${a.lex-9},${a.ley+6} Q${a.lex-10},${a.ley-4} ${a.lex},${a.ley-17} Q${a.lex+10},${a.ley-4} ${a.lex+9},${a.ley+6} Q${a.lex},${a.ley+8} ${a.lex-9},${a.ley+6} Z" fill="${p.u('main')}" stroke="none"/>
+        <path d="M${a.lex-5},${a.ley+4} Q${a.lex-5},${a.ley-3} ${a.lex},${a.ley-11} Q${a.lex+5},${a.ley-3} ${a.lex+5},${a.ley+4} Z" fill="${p.u('accent')}" stroke="none"/>
+        <path d="M${a.rex-9},${a.rey+6} Q${a.rex-10},${a.rey-4} ${a.rex},${a.rey-17} Q${a.rex+10},${a.rey-4} ${a.rex+9},${a.rey+6} Q${a.rex},${a.rey+8} ${a.rex-9},${a.rey+6} Z" fill="${p.u('main')}" stroke="none"/>
+        <path d="M${a.rex-5},${a.rey+4} Q${a.rex-5},${a.rey-3} ${a.rex},${a.rey-11} Q${a.rex+5},${a.rey-3} ${a.rex+5},${a.rey+4} Z" fill="${p.u('accent')}" stroke="none"/>
       ` },
       { name:'Puff', render:(a,p)=>`
         <ellipse cx="${a.lex}" cy="${a.ley+4}" rx="14" ry="12" fill="${p.u('main')}" stroke="none"/>
         <ellipse cx="${a.rex}" cy="${a.rey+4}" rx="14" ry="12" fill="${p.u('main')}" stroke="none"/>
       ` },
-      { name:'Antenna', render:(a,p)=>`
-        <rect x="${a.lex-2}" y="${a.ley-14}" width="4" height="16" rx="2" fill="${p.u('alt')}" stroke="none"/>
-        <circle cx="${a.lex}" cy="${a.ley-17}" r="5" fill="${p.u('accent')}" stroke="none"/>
-        <rect x="${a.rex-2}" y="${a.rey-14}" width="4" height="16" rx="2" fill="${p.u('alt')}" stroke="none"/>
-        <circle cx="${a.rex}" cy="${a.rey-17}" r="5" fill="${p.u('accent')}" stroke="none"/>
+      { name:'Horns', render:(a,p)=>`
+        <ellipse cx="${a.lex}" cy="${a.ley-10}" rx="6" ry="12" fill="${p.u('accent')}" stroke="none" transform="rotate(-12 ${a.lex} ${a.ley-10})"/>
+        <ellipse cx="${a.rex}" cy="${a.rey-10}" rx="6" ry="12" fill="${p.u('accent')}" stroke="none" transform="rotate(12 ${a.rex} ${a.rey-10})"/>
       ` },
     ]
   },
@@ -993,12 +1130,27 @@ const OLD_V2_PART_ORDER = ['body','body_onepiece','head','eyes','eyebrows','mout
 const OLD_PART_ORDER = ['body','body_onepiece','head','eyes','eyebrows','mouth','arms','hands','legs','feet','ears','topper','tail','accessory'];
 
 const state = {
-  mode: 'two-piece',
+  mode: 'one-piece',
   palette: 0,
   scaleIndex: 28,
   parts: Object.fromEntries(PART_ORDER.map(k=>[k,0])),
   locks: {},
 };
+
+// ─────────────────────────────────────────────
+// LIMB RULES (hands = full arm; feet = full leg)
+// ─────────────────────────────────────────────
+function applyLimbRulesToParts(parts) {
+  if (!parts) return;
+  if ((parts.hands || 0) > 0) parts.arms = 0;
+  if ((parts.feet || 0) > 0) parts.legs = 0;
+  if ((parts.arms || 0) > 0) parts.hands = 0;
+  if ((parts.legs || 0) > 0) parts.feet = 0;
+}
+
+function applyLimbRules() {
+  applyLimbRulesToParts(state.parts);
+}
 
 // ─────────────────────────────────────────────
 // RENDER
@@ -1018,29 +1170,27 @@ function renderCharacter(s) {
     return variants[i].render(a, p);
   };
   const layers = [];
+  const parts = s.parts;
+  const armLayer = (parts.hands || 0) > 0 ? get('hands', parts.hands) : get('arms', parts.arms);
+  const legLayer = (parts.feet || 0) > 0 ? get('feet', parts.feet) : get('legs', parts.legs);
 
   if (s.mode === 'two-piece') {
-    layers.push(get('ears', s.parts.ears));
-    layers.push(get('legs', s.parts.legs));
-    layers.push(get('arms', s.parts.arms));
-    if (s.parts.legs > 0) layers.push(get('feet', s.parts.feet));
-    if (s.parts.arms > 0) layers.push(get('hands', s.parts.hands));
-    layers.push(get('body', s.parts.body));
-    layers.push(neckBridgeSvg(a, p));
-    layers.push(get('head', s.parts.head));
+    layers.push(get('ears', parts.ears));
+    layers.push(legLayer);
+    layers.push(armLayer);
+    layers.push(get('body', parts.body));
+    layers.push(get('head', parts.head));
   } else {
-    layers.push(get('ears', s.parts.ears));
-    layers.push(get('legs', s.parts.legs));
-    layers.push(get('arms', s.parts.arms));
-    if (s.parts.legs > 0) layers.push(get('feet', s.parts.feet));
-    if (s.parts.arms > 0) layers.push(get('hands', s.parts.hands));
-    layers.push(get('body_onepiece', s.parts.body_onepiece));
+    layers.push(get('ears', parts.ears));
+    layers.push(legLayer);
+    layers.push(armLayer);
+    layers.push(get('body_onepiece', parts.body_onepiece));
   }
 
-  layers.push(get('eyes', s.parts.eyes));
+  layers.push(get('eyes', parts.eyes));
 
   const si = s.scaleIndex != null ? s.scaleIndex : 28;
-  const scale = scaleFromIndex(si);
+  const scale = effectiveScaleForState(s, scaleFromIndex(si));
   const inner = layers.join('');
   return buildGradientDefs(pi) + `<g transform="translate(100,100) scale(${scale}) translate(-100,-100)">${inner}</g>`;
 }
@@ -1196,6 +1346,7 @@ function updateDNA() {
   document.getElementById('dna-code').textContent = encodeDNA(state);
 }
 function updateAll() {
+  applyLimbRules();
   buildControls();
   buildPalettes();
   updatePreview();
@@ -1232,11 +1383,65 @@ function randPart(k) {
   const max = PARTS[k].variants.length;
   state.parts[k] = Math.floor(Math.random() * max);
 }
+function randomScaleIndex() {
+  return SCALE_INDEX_RANDOM_MIN + Math.floor(Math.random() * (SCALE_INDEX_RANDOM_MAX - SCALE_INDEX_RANDOM_MIN + 1));
+}
+
 function randomizeAll() {
   partsForMode(state.mode).forEach(k => randPart(k));
   if (!state.locks['__palette']) state.palette = Math.floor(Math.random() * PALETTES.length);
-  if (!state.locks['__scale']) state.scaleIndex = Math.floor(Math.random() * (SCALE_INDEX_MAX + 1));
+  if (!state.locks['__scale']) state.scaleIndex = randomScaleIndex();
+  applyLimbRules();
   updateAll();
+}
+
+function openRandomize100() {
+  const grid = document.getElementById('r100-grid');
+  const overlay = document.getElementById('modal-r100');
+  grid.innerHTML = '';
+  for (let i = 0; i < 100; i++) {
+    const s = {
+      mode: state.mode,
+      palette: Math.floor(Math.random() * PALETTES.length),
+      scaleIndex: randomScaleIndex(),
+      parts: Object.fromEntries(PART_ORDER.map(k => [k, 0])),
+      locks: {},
+    };
+    partsForMode(s.mode).forEach(k => {
+      s.parts[k] = Math.floor(Math.random() * PARTS[k].variants.length);
+    });
+    applyLimbRulesToParts(s.parts);
+    const dna = encodeDNA(s);
+    const svgInner = renderCharacter(s);
+    const cell = document.createElement('div');
+    cell.className = 'r100-cell';
+    cell.title = 'Click to save to gallery and load';
+    cell.innerHTML = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">${svgInner}</svg>`;
+    cell.addEventListener('click', () => {
+      const loaded = decodeDNA(dna);
+      if (!loaded) return;
+      Object.assign(state, loaded);
+      document.querySelectorAll('.mode-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.mode === state.mode)
+      );
+      updateAll();
+      const saveDna = encodeDNA(state);
+      if (gallery.some(g => g.dna === saveDna)) {
+        showToast('Already in gallery');
+      } else {
+        if (gallery.length >= 24) gallery.shift();
+        gallery.push({ dna: saveDna, svg: document.getElementById('char-svg').innerHTML });
+        saveGallery();
+        buildGallery();
+        showToast('Saved to gallery ✓');
+      }
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+    });
+    grid.appendChild(cell);
+  }
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
 }
 
 // ─────────────────────────────────────────────
@@ -1286,9 +1491,8 @@ document.addEventListener('click', e => {
 
   if (action === 'set-variant') {
     state.parts[part] = parseInt(variant);
-    el.closest('.variant-grid').querySelectorAll('.variant-btn').forEach(b =>
-      b.classList.toggle('active', parseInt(b.dataset.variant) === state.parts[part])
-    );
+    applyLimbRules();
+    buildControls();
     updatePreview(); updateDNA();
   }
   else if (action === 'lock-part') {
@@ -1298,6 +1502,7 @@ document.addEventListener('click', e => {
   else if (action === 'rand-part') {
     state.locks[part] = false;
     randPart(part);
+    applyLimbRules();
     buildControls(); updatePreview(); updateDNA();
   }
   else if (action === 'set-palette') {
@@ -1321,7 +1526,7 @@ document.addEventListener('click', e => {
   }
   else if (action === 'rand-scale') {
     if (state.locks['__scale']) return;
-    state.scaleIndex = Math.floor(Math.random() * (SCALE_INDEX_MAX + 1));
+    state.scaleIndex = randomScaleIndex();
     buildControls(); updatePreview(); updateDNA();
   }
   else if (action === 'lock-scale') {
@@ -1348,6 +1553,27 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
 });
 
 document.getElementById('btn-randomize').addEventListener('click', randomizeAll);
+document.getElementById('btn-randomize-100').addEventListener('click', openRandomize100);
+document.getElementById('btn-r100-close').addEventListener('click', () => {
+  const overlay = document.getElementById('modal-r100');
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+});
+document.getElementById('modal-r100').addEventListener('click', (e) => {
+  if (e.target.id === 'modal-r100') {
+    e.currentTarget.classList.remove('open');
+    e.currentTarget.setAttribute('aria-hidden', 'true');
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('modal-r100');
+    if (overlay.classList.contains('open')) {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+  }
+});
 
 document.getElementById('btn-save').addEventListener('click', () => {
   const dna = encodeDNA(state);
